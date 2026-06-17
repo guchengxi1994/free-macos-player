@@ -1,0 +1,26 @@
+String formatDuration(Duration duration) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+  if (hours > 0) {
+    return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+  }
+
+  return '$minutes:$seconds';
+}
+
+String formatProgressLabel(Duration position, Duration duration) {
+  if (duration == Duration.zero) {
+    return formatDuration(position);
+  }
+  return '${formatDuration(position)} / ${formatDuration(duration)}';
+}
+
+double progressRatio(Duration position, Duration duration) {
+  if (duration.inMilliseconds <= 0) {
+    return 0;
+  }
+
+  return (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+}

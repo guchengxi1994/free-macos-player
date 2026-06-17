@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:free_macos_player/main.dart';
+import 'package:free_macos_player/core/utils/formatters.dart';
 
 void main() {
   group('_formatDuration', () {
