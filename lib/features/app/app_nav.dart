@@ -1,11 +1,20 @@
 enum AppSection {
-  nowPlaying('正在播放'),
-  history('历史记录'),
-  favorites('收藏夹'),
-  playlists('播放列表'),
-  settings('设置');
+  nowPlaying('正在播放', '/now-playing'),
+  history('历史记录', '/history'),
+  favorites('收藏夹', '/favorites'),
+  playlists('播放列表', '/playlists'),
+  settings('设置', '/settings');
 
-  const AppSection(this.label);
+  const AppSection(this.label, this.path);
 
   final String label;
+  final String path;
+
+  static AppSection fromLocation(String location) {
+    final path = location == '/' ? nowPlaying.path : location;
+    return values.firstWhere(
+      (section) => section.path == path,
+      orElse: () => nowPlaying,
+    );
+  }
 }

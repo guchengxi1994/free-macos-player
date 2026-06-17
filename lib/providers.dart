@@ -6,17 +6,12 @@ import 'data/models/media_item.dart';
 import 'data/models/playlist_entry.dart';
 import 'data/repositories/library_repository.dart';
 import 'data/services/local_database.dart';
-import 'features/app/app_nav.dart';
 import 'features/player/player_controller.dart';
 import 'features/player/player_state.dart';
 
 final localDatabaseProvider = FutureProvider<LocalDatabase>((ref) async {
   return LocalDatabase.open();
 });
-
-final appSectionProvider = StateProvider<AppSection>(
-  (ref) => AppSection.nowPlaying,
-);
 
 final darkModeProvider = StateProvider<bool>((ref) => true);
 

@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../core/theme/app_palette.dart';
-import '../../data/models/media_item.dart';
 import '../../providers.dart';
-import '../favorites/favorites_view.dart';
-import '../history/history_view.dart';
-import '../player/now_playing_view.dart';
-import '../playlists/playlists_view.dart';
-import '../settings/settings_view.dart';
 import 'app_nav.dart';
 
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, required this.location, required this.child});
+
+  final String location;
+  final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
-    final section = ref.watch(appSectionProvider);
+    final section = AppSection.fromLocation(location);
     final darkMode = ref.watch(darkModeProvider);
     final library = ref.watch(mediaLibraryProvider);
     final currentMedia = ref.watch(currentMediaProvider);
@@ -32,110 +30,69 @@ class AppShell extends ConsumerWidget {
       });
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: palette.pageGradient,
+    return Material(
+      type: MaterialType.transparency,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: palette.pageGradient,
+          ),
         ),
-      ),
-      child: library.when(
-        data: (_) => ColoredBox(
-          color: palette.shellBackground,
-          child: Row(
-            children: [
-              SizedBox(
-                width: 232,
-                child: _Sidebar(section: section, darkMode: darkMode),
-              ),
-              Container(width: 1, color: palette.stroke),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: KeyedSubtree(
-                    key: ValueKey(section),
-                    child: _ActivePage(
-                      section: section,
-                      currentMedia: currentMedia,
-                    ),
+        child: library.when(
+          data: (_) => ColoredBox(
+            color: palette.shellBackground,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 232,
+                  child: _Sidebar(section: section, darkMode: darkMode),
+                ),
+                Container(width: 1, color: palette.stroke),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+          loading: () => Center(
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: palette.shellBackground,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: palette.stroke),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.shadow,
+                    blurRadius: 28,
+                    offset: const Offset(0, 16),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-        loading: () => Center(
-          child: Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: palette.shellBackground,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.stroke),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.shadow,
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+              child: const CircularProgressIndicator(),
             ),
-            child: const CircularProgressIndicator(),
           ),
-        ),
-        error: (error, _) => Center(
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: palette.shellBackground,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.stroke),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.shadow,
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+          error: (error, _) => Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: palette.shellBackground,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: palette.stroke),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.shadow,
+                    blurRadius: 28,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Text('初始化失败: $error'),
             ),
-            child: Text('初始化失败: $error'),
           ),
         ),
       ),
     );
-  }
-}
-
-class _ActivePage extends StatelessWidget {
-  const _ActivePage({required this.section, required this.currentMedia});
-
-  final AppSection section;
-  final MediaItem? currentMedia;
-
-  @override
-  Widget build(BuildContext context) {
-    final media = currentMedia;
-
-    switch (section) {
-      case AppSection.nowPlaying:
-        return const NowPlayingView();
-      case AppSection.history:
-        return const HistoryView(compact: false);
-      case AppSection.favorites:
-        return media == null
-            ? const _EmptyPage(
-                icon: Icons.star_border_rounded,
-                title: '还没有可展示的视频',
-                message: '先添加或播放一个视频，这里会展示影片详情与收藏操作。',
-              )
-            : FavoritesView(media: media);
-      case AppSection.playlists:
-        return const PlaylistsView(expanded: true);
-      case AppSection.settings:
-        return const SettingsView();
-    }
   }
 }
 
@@ -193,7 +150,7 @@ class _Sidebar extends ConsumerWidget {
                 label: item.$1.label,
                 selected: section == item.$1,
                 onTap: () {
-                  ref.read(appSectionProvider.notifier).state = item.$1;
+                  context.go(item.$1.path);
                 },
               ),
               const SizedBox(height: 10),
@@ -204,8 +161,7 @@ class _Sidebar extends ConsumerWidget {
               label: '设置',
               selected: section == AppSection.settings,
               onTap: () {
-                ref.read(appSectionProvider.notifier).state =
-                    AppSection.settings;
+                context.go(AppSection.settings.path);
               },
             ),
             const SizedBox(height: 4),
@@ -338,60 +294,6 @@ class _WindowControlButton extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyPage extends StatelessWidget {
-  const _EmptyPage({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final theme = Theme.of(context);
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 78,
-              height: 78,
-              decoration: BoxDecoration(
-                color: palette.primarySoft,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(icon, size: 38, color: palette.primary),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.softText,
-              ),
-            ),
-          ],
         ),
       ),
     );

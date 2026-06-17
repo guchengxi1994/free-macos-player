@@ -4,7 +4,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/theme/app_theme.dart';
-import 'features/app/app_shell.dart';
+import 'features/app/app_router.dart';
 import 'features/settings/settings_sync.dart';
 import 'providers.dart';
 
@@ -42,14 +42,17 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final darkMode = ref.watch(darkModeProvider);
+    final router = ref.watch(appRouterProvider);
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Free macOS Player',
-      theme: buildAppTheme(false),
-      darkTheme: buildAppTheme(true),
-      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const SettingsSync(child: Scaffold(body: AppShell())),
+    return SettingsSync(
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'Free macOS Player',
+        theme: buildAppTheme(false),
+        darkTheme: buildAppTheme(true),
+        themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+        routerConfig: router,
+      ),
     );
   }
 }

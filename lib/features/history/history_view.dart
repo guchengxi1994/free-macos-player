@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
@@ -8,10 +9,7 @@ import '../../providers.dart';
 import '../app/app_nav.dart';
 
 class HistoryView extends ConsumerWidget {
-  const HistoryView({
-    super.key,
-    required this.compact,
-  });
+  const HistoryView({super.key, required this.compact});
 
   final bool compact;
 
@@ -152,10 +150,7 @@ class _HistoryGroup extends StatelessWidget {
 }
 
 class _HistoryRow extends ConsumerWidget {
-  const _HistoryRow({
-    required this.item,
-    required this.compact,
-  });
+  const _HistoryRow({required this.item, required this.compact});
 
   final MediaItem item;
   final bool compact;
@@ -170,7 +165,7 @@ class _HistoryRow extends ConsumerWidget {
       onTap: () {
         ref.read(currentMediaIdProvider.notifier).state = item.mediaId;
         ref.read(playerControllerProvider.notifier).openMedia(item);
-        ref.read(appSectionProvider.notifier).state = AppSection.nowPlaying;
+        context.go(AppSection.nowPlaying.path);
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
