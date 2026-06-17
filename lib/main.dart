@@ -1,122 +1,381 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'macOS Video Player',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF111315),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E847F),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MacosPlayerPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class MacosPlayerPage extends StatefulWidget {
+  const MacosPlayerPage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MacosPlayerPage> createState() => _MacosPlayerPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MacosPlayerPageState extends State<MacosPlayerPage> {
+  static const String _defaultVideoUrl =
+      'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4';
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  late final Player _player;
+  late final VideoController _videoController;
+  late final TextEditingController _urlController;
+
+  StreamSubscription<bool>? _playingSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<double>? _volumeSubscription;
+  StreamSubscription<bool>? _bufferingSubscription;
+  StreamSubscription<String>? _errorSubscription;
+
+  bool _isPlaying = false;
+  bool _isBuffering = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  double _volume = 100;
+  String? _errorText;
+  bool _isOpening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = Player();
+    _videoController = VideoController(_player);
+    _urlController = TextEditingController(text: _defaultVideoUrl);
+    _bindPlayerStreams();
+    unawaited(_openMedia(_defaultVideoUrl));
+  }
+
+  void _bindPlayerStreams() {
+    _playingSubscription = _player.stream.playing.listen((value) {
+      if (!mounted) return;
+      setState(() => _isPlaying = value);
     });
+    _positionSubscription = _player.stream.position.listen((value) {
+      if (!mounted) return;
+      setState(() => _position = value);
+    });
+    _durationSubscription = _player.stream.duration.listen((value) {
+      if (!mounted) return;
+      setState(() => _duration = value);
+    });
+    _volumeSubscription = _player.stream.volume.listen((value) {
+      if (!mounted) return;
+      setState(() => _volume = value);
+    });
+    _bufferingSubscription = _player.stream.buffering.listen((value) {
+      if (!mounted) return;
+      setState(() => _isBuffering = value);
+    });
+    _errorSubscription = _player.stream.error.listen((value) {
+      if (!mounted) return;
+      setState(() => _errorText = value);
+    });
+  }
+
+  Future<void> _openMedia(String input) async {
+    final source = input.trim();
+    if (source.isEmpty) {
+      setState(() {
+        _errorText = '请输入有效的视频地址';
+      });
+      return;
+    }
+
+    setState(() {
+      _isOpening = true;
+      _errorText = null;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+    });
+
+    try {
+      await _player.open(Media(_normalizeMediaSource(source)));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = '加载失败: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOpening = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _togglePlayback() async {
+    if (_isPlaying) {
+      await _player.pause();
+    } else {
+      await _player.play();
+    }
+  }
+
+  Future<void> _seekRelative(Duration offset) async {
+    final target = _position + offset;
+    final max = _duration == Duration.zero ? target : _duration;
+    final clamped = target < Duration.zero
+        ? Duration.zero
+        : target > max
+            ? max
+            : target;
+    await _player.seek(clamped);
+  }
+
+  Future<void> _onSeek(double seconds) async {
+    await _player.seek(Duration(milliseconds: (seconds * 1000).round()));
+  }
+
+  Future<void> _setVolume(double value) async {
+    await _player.setVolume(value);
+  }
+
+  @override
+  void dispose() {
+    _playingSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
+    _volumeSubscription?.cancel();
+    _bufferingSubscription?.cancel();
+    _errorSubscription?.cancel();
+    _urlController.dispose();
+    _player.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final theme = Theme.of(context);
+    final durationSeconds = _duration.inMilliseconds <= 0
+        ? 1.0
+        : _duration.inMilliseconds / 1000;
+    final positionSeconds = _position.inMilliseconds <= 0
+        ? 0.0
+        : (_position.inMilliseconds / 1000).clamp(0.0, durationSeconds);
+
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('macOS 视频播放器'),
+        centerTitle: false,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFF171A1D),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _urlController,
+                        decoration: const InputDecoration(
+                          labelText: '视频 URL',
+                          hintText: '输入 mp4 / m3u8 / 直播流地址',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: _openMedia,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _isOpening
+                          ? null
+                          : () => _openMedia(_urlController.text),
+                      icon: const Icon(Icons.playlist_play_rounded),
+                      label: Text(_isOpening ? '加载中' : '加载视频'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0E1012), Color(0xFF1D2428)],
+                  ),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Video(
+                        controller: _videoController,
+                        controls: NoVideoControls,
+                        fit: BoxFit.contain,
+                      ),
+                      if (_isBuffering || _isOpening)
+                        const Center(child: CircularProgressIndicator()),
+                      if (_errorText != null)
+                        Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 420),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(0, 0, 0, 0.75),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              _errorText!,
+                              style: theme.textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFF171A1D),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
+                child: Column(
+                  children: [
+                    Slider(
+                      value: positionSeconds,
+                      max: durationSeconds,
+                        onChanged: _duration == Duration.zero
+                            ? null
+                            : (value) => unawaited(_onSeek(value)),
+                    ),
+                    Row(
+                      children: [
+                        Text(formatDuration(_position)),
+                        const Spacer(),
+                        Text(formatDuration(_duration)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => _seekRelative(
+                            const Duration(seconds: -10),
+                          ),
+                          icon: const Icon(Icons.replay_10_rounded),
+                        ),
+                        const SizedBox(width: 4),
+                        FilledButton.tonalIcon(
+                          onPressed: _togglePlayback,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_circle_filled_rounded
+                                : Icons.play_circle_fill_rounded,
+                          ),
+                          label: Text(_isPlaying ? '暂停' : '播放'),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () => _seekRelative(
+                            const Duration(seconds: 10),
+                          ),
+                          icon: const Icon(Icons.forward_10_rounded),
+                        ),
+                        const SizedBox(width: 20),
+                        const Icon(Icons.volume_up_rounded),
+                        Expanded(
+                          child: Slider(
+                            value: _volume.clamp(0, 100),
+                            max: 100,
+                          onChanged: (value) => unawaited(_setVolume(value)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 44,
+                          child: Text(
+                            _volume.round().toString(),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
     );
   }
+}
+
+String formatDuration(Duration duration) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+  if (hours > 0) {
+    return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+  }
+
+  return '$minutes:$seconds';
+}
+
+String _normalizeMediaSource(String source) {
+  final uri = Uri.tryParse(source);
+  if (uri != null && uri.hasScheme) {
+    return source;
+  }
+
+  final file = File(source);
+  if (file.existsSync()) {
+    return file.uri.toString();
+  }
+
+  return source;
 }
