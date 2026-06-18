@@ -6,7 +6,6 @@ import 'package:isar_community_flutter_libs/isar_flutter_libs.dart';
 
 import '../models/app_settings.dart';
 import '../models/media_item.dart';
-import '../models/media_item_seed.dart';
 import '../models/playlist_entry.dart';
 
 class LocalDatabase {
@@ -28,7 +27,7 @@ class LocalDatabase {
     ], directory: directory);
 
     final database = LocalDatabase._(isar);
-    await database._seedIfNeeded();
+    await database._prepareDefaults();
     return database;
   }
 
@@ -48,7 +47,7 @@ class LocalDatabase {
     return support.path;
   }
 
-  Future<void> _seedIfNeeded() async {
+  Future<void> _prepareDefaults() async {
     final settingsCount = await isar.collection<AppSettings>().count();
     if (settingsCount == 0) {
       await isar.writeTxn(() async {
@@ -56,15 +55,30 @@ class LocalDatabase {
       });
     }
 
-    final count = await isar.collection<MediaItem>().count();
-    if (count > 0) {
+    await _removeLegacySeedData();
+  }
+
+  Future<void> _removeLegacySeedData() async {
+    const legacySeedIds = {
+      'blue-planet-one-ocean',
+      'interstellar-2014',
+      'your-name-2016',
+      'shawshank-redemption-1994',
+      'planet-earth-fresh-water',
+    };
+
+    final mediaItems = await isar.collection<MediaItem>().where().findAll();
+    final idsToDelete = mediaItems
+        .where((item) => legacySeedIds.contains(item.mediaId))
+        .map((item) => item.id)
+        .toList();
+
+    if (idsToDelete.isEmpty) {
       return;
     }
 
-    final seed = buildSeedBundle();
     await isar.writeTxn(() async {
-      await isar.collection<MediaItem>().putAll(seed.mediaItems);
-      await isar.collection<PlaylistEntry>().putAll(seed.playlists);
+      await isar.collection<MediaItem>().deleteAll(idsToDelete);
     });
   }
 }

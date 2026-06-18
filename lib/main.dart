@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/app/app_router.dart';
+import 'features/player/macos_open_file_sync.dart';
 import 'features/settings/settings_sync.dart';
 import 'providers.dart';
 
@@ -44,14 +45,16 @@ class MyApp extends ConsumerWidget {
     final darkMode = ref.watch(darkModeProvider);
     final router = ref.watch(appRouterProvider);
 
-    return SettingsSync(
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title: 'Free macOS Player',
-        theme: buildAppTheme(false),
-        darkTheme: buildAppTheme(true),
-        themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
-        routerConfig: router,
+    return MacosOpenFileSync(
+      child: SettingsSync(
+        child: MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          title: 'Free macOS Player',
+          theme: buildAppTheme(false),
+          darkTheme: buildAppTheme(true),
+          themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+          routerConfig: router,
+        ),
       ),
     );
   }

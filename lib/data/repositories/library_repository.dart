@@ -1,4 +1,5 @@
 import 'package:isar_community/isar.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/app_settings.dart';
 import '../models/media_item.dart';
@@ -79,6 +80,33 @@ class LibraryRepository {
 
   Future<MediaItem?> getByMediaId(String mediaId) {
     return _items.filter().mediaIdEqualTo(mediaId).findFirst();
+  }
+
+  Future<MediaItem> upsertLocalFile(String path) async {
+    final normalizedPath = p.normalize(path);
+    final mediaId = 'file:$normalizedPath';
+    final existing = await getByMediaId(mediaId);
+    final fileName = p.basenameWithoutExtension(normalizedPath);
+    final now = DateTime.now();
+    final item = existing ?? MediaItem();
+
+    item
+      ..mediaId = mediaId
+      ..title = fileName.isEmpty ? p.basename(normalizedPath) : fileName
+      ..subtitle = p.dirname(normalizedPath)
+      ..source = normalizedPath
+      ..metaLine = p
+          .extension(normalizedPath)
+          .replaceFirst('.', '')
+          .toUpperCase()
+      ..lastPlayedAt = now
+      ..sortOrder = existing?.sortOrder ?? now.millisecondsSinceEpoch;
+
+    await isar.writeTxn(() async {
+      await _items.put(item);
+    });
+
+    return item;
   }
 
   Future<void> updateProgress({
