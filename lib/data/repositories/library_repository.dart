@@ -4,7 +4,6 @@ import 'package:path/path.dart' as p;
 import '../models/app_settings.dart';
 import '../models/favorite_folder.dart';
 import '../models/media_item.dart';
-import '../models/playlist_entry.dart';
 
 class LibraryRepository {
   const LibraryRepository(this.isar);
@@ -15,8 +14,6 @@ class LibraryRepository {
   IsarCollection<FavoriteFolder> get _favoriteFolders =>
       isar.collection<FavoriteFolder>();
   IsarCollection<MediaItem> get _items => isar.collection<MediaItem>();
-  IsarCollection<PlaylistEntry> get _playlists =>
-      isar.collection<PlaylistEntry>();
 
   Stream<AppSettings> watchSettings() async* {
     final existing = await getSettings();
@@ -55,10 +52,6 @@ class LibraryRepository {
 
   Stream<List<MediaItem>> watchAllMedia() {
     return _items.where().sortBySortOrder().watch(fireImmediately: true);
-  }
-
-  Stream<List<PlaylistEntry>> watchPlaylists() {
-    return _playlists.where().sortBySortOrder().watch(fireImmediately: true);
   }
 
   Stream<List<FavoriteFolder>> watchFavoriteFolders() {
@@ -110,6 +103,33 @@ class LibraryRepository {
           .replaceFirst('.', '')
           .toUpperCase()
       ..lastPlayedAt = now
+      ..sortOrder = existing?.sortOrder ?? now.millisecondsSinceEpoch;
+
+    await isar.writeTxn(() async {
+      await _items.put(item);
+    });
+
+    return item;
+  }
+
+  Future<MediaItem> upsertNetworkSource({
+    required String url,
+    String? title,
+  }) async {
+    final trimmedUrl = url.trim();
+    final mediaId = 'url:$trimmedUrl';
+    final existing = await getByMediaId(mediaId);
+    final uri = Uri.tryParse(trimmedUrl);
+    final fallbackTitle = uri?.host.isNotEmpty == true ? uri!.host : '网络视频';
+    final now = DateTime.now();
+    final item = existing ?? MediaItem();
+
+    item
+      ..mediaId = mediaId
+      ..title = title?.trim().isNotEmpty == true ? title!.trim() : fallbackTitle
+      ..subtitle = uri?.host
+      ..source = trimmedUrl
+      ..metaLine = uri?.scheme.toUpperCase()
       ..sortOrder = existing?.sortOrder ?? now.millisecondsSinceEpoch;
 
     await isar.writeTxn(() async {
@@ -258,18 +278,6 @@ class LibraryRepository {
     }
     await isar.writeTxn(() async {
       await _items.putAll(items);
-    });
-  }
-
-  Future<void> createPlaylist(String title) async {
-    final existingCount = await _playlists.count();
-    final playlist = PlaylistEntry()
-      ..playlistId = 'playlist-${DateTime.now().millisecondsSinceEpoch}'
-      ..title = title
-      ..description = '新建播放列表'
-      ..sortOrder = existingCount + 1;
-    await isar.writeTxn(() async {
-      await _playlists.put(playlist);
     });
   }
 }

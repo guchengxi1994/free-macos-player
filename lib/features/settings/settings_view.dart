@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/app_controls.dart';
 import '../../data/models/app_settings.dart';
 import '../../data/models/favorite_folder.dart';
 import '../../data/models/media_item.dart';
-import '../../data/models/playlist_entry.dart';
 import '../../providers.dart';
 
 class SettingsView extends ConsumerWidget {
@@ -24,12 +24,7 @@ class SettingsView extends ConsumerWidget {
     final mediaItems = ref
         .watch(mediaLibraryProvider)
         .maybeWhen(data: (value) => value, orElse: () => const <MediaItem>[]);
-    final playlists = ref
-        .watch(playlistsProvider)
-        .maybeWhen(
-          data: (value) => value,
-          orElse: () => const <PlaylistEntry>[],
-        );
+    final networkItems = ref.watch(networkMediaProvider);
     final favoriteFolders = ref
         .watch(favoriteFoldersProvider)
         .maybeWhen(
@@ -41,13 +36,13 @@ class SettingsView extends ConsumerWidget {
     return ColoredBox(
       color: palette.panelBackground,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(30, 28, 30, 30),
+        padding: const EdgeInsets.fromLTRB(26, 24, 26, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               '设置',
-              style: theme.textTheme.headlineMedium?.copyWith(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -58,7 +53,7 @@ class SettingsView extends ConsumerWidget {
                 color: palette.softText,
               ),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 22),
             Wrap(
               spacing: 14,
               runSpacing: 14,
@@ -82,17 +77,17 @@ class SettingsView extends ConsumerWidget {
                   helper: '个文件夹',
                 ),
                 _StatCard(
-                  icon: Icons.queue_music_rounded,
-                  label: '播放列表',
-                  value: '${playlists.length}',
-                  helper: '个列表',
+                  icon: Icons.link_rounded,
+                  label: '网络资源',
+                  value: '${networkItems.length}',
+                  helper: '条链接',
                 ),
               ],
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 18),
             _SectionCard(
               title: '外观',
-              subtitle: '把主题切换放在设置里，而不是塞在侧边栏按钮上。',
+              subtitle: '窗口与内容区域。',
               child: Row(
                 children: [
                   Expanded(
@@ -125,7 +120,7 @@ class SettingsView extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _SectionCard(
               title: '播放',
               subtitle: media == null ? '当前没有选中的媒体。' : '当前媒体: ${media.title}',
@@ -174,10 +169,10 @@ class SettingsView extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _SectionCard(
               title: '本地数据',
-              subtitle: '媒体信息、播放进度、收藏夹和播放列表都保存在本机 Isar 数据库。',
+              subtitle: '媒体、进度、收藏夹和网络资源。',
               child: Column(
                 children: [
                   _InfoTile(
@@ -195,7 +190,7 @@ class SettingsView extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
+                    child: AppPillButton(
                       onPressed: historyCount == 0
                           ? null
                           : () {
@@ -203,17 +198,9 @@ class SettingsView extends ConsumerWidget {
                                   .read(libraryRepositoryProvider.future)
                                   .then((repo) => repo.clearHistory());
                             },
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      label: const Text('清空历史记录'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
+                      icon: Icons.delete_outline_rounded,
+                      label: '清空历史记录',
+                      tone: AppButtonTone.secondary,
                     ),
                   ),
                 ],
@@ -255,18 +242,18 @@ class _StatCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      width: 168,
-      padding: const EdgeInsets.all(16),
+      width: 150,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: palette.panelSecondaryBackground,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: palette.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: palette.primary),
-          const SizedBox(height: 16),
+          Icon(icon, color: palette.primary, size: 18),
+          const SizedBox(height: 14),
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(color: palette.softText),
@@ -277,7 +264,7 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -317,10 +304,10 @@ class _SectionCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: palette.panelSecondaryBackground,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: palette.stroke),
       ),
       child: Column(
@@ -328,7 +315,7 @@ class _SectionCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -339,7 +326,7 @@ class _SectionCard extends StatelessWidget {
               color: palette.softText,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -366,21 +353,21 @@ class _ThemeChoice extends StatelessWidget {
     final theme = Theme.of(context);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: selected ? palette.primarySoft : palette.panelBackground,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? palette.primary : palette.stroke,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? palette.primary : null),
+            Icon(icon, color: selected ? palette.primary : null, size: 18),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -392,11 +379,7 @@ class _ThemeChoice extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle_rounded,
-                color: palette.primary,
-                size: 20,
-              ),
+              Icon(Icons.check_rounded, color: palette.primary, size: 18),
           ],
         ),
       ),
@@ -421,15 +404,15 @@ class _VolumeTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: palette.panelBackground,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: palette.stroke),
       ),
       child: Row(
         children: [
-          Icon(Icons.volume_up_rounded, color: palette.primary),
+          Icon(Icons.volume_up_rounded, color: palette.primary, size: 18),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -485,7 +468,7 @@ class _SwitchTile extends StatelessWidget {
       icon: icon,
       title: title,
       subtitle: subtitle,
-      trailing: Switch.adaptive(value: value, onChanged: onChanged),
+      trailing: AppToggle(value: value, onChanged: onChanged),
     );
   }
 }
@@ -531,15 +514,15 @@ class _TileShell extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: palette.panelBackground,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: palette.stroke),
       ),
       child: Row(
         children: [
-          Icon(icon, color: palette.primary),
+          Icon(icon, color: palette.primary, size: 18),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

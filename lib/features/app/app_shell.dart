@@ -17,7 +17,6 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final section = AppSection.fromLocation(location);
-    final darkMode = ref.watch(darkModeProvider);
     final library = ref.watch(mediaLibraryProvider);
     final currentMedia = ref.watch(currentMediaProvider);
 
@@ -45,10 +44,7 @@ class AppShell extends ConsumerWidget {
             color: palette.shellBackground,
             child: Row(
               children: [
-                SizedBox(
-                  width: 232,
-                  child: _Sidebar(section: section, darkMode: darkMode),
-                ),
+                SizedBox(width: 124, child: _Sidebar(section: section)),
                 Container(width: 1, color: palette.stroke),
                 Expanded(child: child),
               ],
@@ -96,28 +92,26 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-class _Sidebar extends ConsumerWidget {
-  const _Sidebar({required this.section, required this.darkMode});
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({required this.section});
 
   final AppSection section;
-  final bool darkMode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final theme = Theme.of(context);
 
     const items = [
       (AppSection.nowPlaying, Icons.play_circle_outline_rounded),
       (AppSection.history, Icons.history_rounded),
       (AppSection.favorites, Icons.star_border_rounded),
-      (AppSection.playlists, Icons.tune_rounded),
+      (AppSection.playlists, Icons.link_rounded),
     ];
 
     return ColoredBox(
       color: palette.sidebarBackground,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+        padding: const EdgeInsets.fromLTRB(14, 16, 12, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -131,19 +125,19 @@ class _Sidebar extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 22),
             DragToMoveArea(
               child: Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: palette.stroke),
                 ),
-                child: const Icon(Icons.hexagon_outlined, size: 18),
+                child: const Icon(Icons.hexagon_outlined, size: 15),
               ),
             ),
-            const SizedBox(height: 34),
+            const SizedBox(height: 28),
             for (final item in items) ...[
               _SidebarItem(
                 icon: item.$2,
@@ -153,7 +147,7 @@ class _Sidebar extends ConsumerWidget {
                   context.go(item.$1.path);
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 7),
             ],
             const Spacer(),
             _SidebarItem(
@@ -163,16 +157,6 @@ class _Sidebar extends ConsumerWidget {
               onTap: () {
                 context.go(AppSection.settings.path);
               },
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: Text(
-                darkMode ? '深色外观' : '浅色外观',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.softText,
-                ),
-              ),
             ),
           ],
         ),
@@ -200,31 +184,32 @@ class _SidebarItem extends StatelessWidget {
     final theme = Theme.of(context);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(7),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: selected ? palette.primarySoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(7),
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              size: 22,
+              size: 17,
               color: selected ? palette.primary : theme.iconTheme.color,
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected ? palette.primary : null,
                 ),
               ),

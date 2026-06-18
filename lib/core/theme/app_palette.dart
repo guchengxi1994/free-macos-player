@@ -31,32 +31,32 @@ class AppPalette {
     final dark = Theme.of(context).brightness == Brightness.dark;
     if (dark) {
       return AppPalette(
-        pageGradient: const [Color(0xFF657082), Color(0xFF2A313D)],
-        shellBackground: const Color(0xFF131923),
-        panelBackground: const Color(0xFF111821),
-        panelSecondaryBackground: const Color(0xFF171F2B),
-        sidebarBackground: const Color(0xFF0E141D),
-        stroke: const Color.fromRGBO(255, 255, 255, 0.08),
-        softText: const Color(0xFF8C97AA),
-        primary: const Color(0xFF5278FF),
-        primarySoft: const Color.fromRGBO(82, 120, 255, 0.18),
-        shadow: const Color.fromRGBO(0, 0, 0, 0.26),
-        overlay: const Color.fromRGBO(4, 8, 16, 0.68),
+        pageGradient: const [Color(0xFF68717F), Color(0xFF313945)],
+        shellBackground: const Color(0xFF0B121B),
+        panelBackground: const Color(0xFF0F1721),
+        panelSecondaryBackground: const Color(0xFF151E29),
+        sidebarBackground: const Color(0xFF0A111A),
+        stroke: const Color.fromRGBO(255, 255, 255, 0.075),
+        softText: const Color(0xFF8E98AA),
+        primary: const Color(0xFF4C73FF),
+        primarySoft: const Color.fromRGBO(76, 115, 255, 0.16),
+        shadow: const Color.fromRGBO(0, 0, 0, 0.34),
+        overlay: const Color.fromRGBO(4, 8, 14, 0.62),
       );
     }
 
     return AppPalette(
-      pageGradient: const [Color(0xFFEFF3FA), Color(0xFFDCE7F6)],
-      shellBackground: Colors.white,
+      pageGradient: const [Color(0xFFF1F5FB), Color(0xFFDDE8F5)],
+      shellBackground: const Color(0xFFFDFEFF),
       panelBackground: Colors.white,
-      panelSecondaryBackground: const Color(0xFFF7F9FD),
-      sidebarBackground: const Color(0xFFF9FBFF),
-      stroke: const Color(0xFFE9EEF6),
-      softText: const Color(0xFF8D97A6),
-      primary: const Color(0xFF4C74FF),
-      primarySoft: const Color.fromRGBO(76, 116, 255, 0.10),
-      shadow: const Color.fromRGBO(40, 67, 111, 0.10),
-      overlay: const Color.fromRGBO(255, 255, 255, 0.66),
+      panelSecondaryBackground: const Color(0xFFF6F8FC),
+      sidebarBackground: const Color(0xFFFBFCFF),
+      stroke: const Color(0xFFE6EBF3),
+      softText: const Color(0xFF8B96A8),
+      primary: const Color(0xFF3F6DFF),
+      primarySoft: const Color.fromRGBO(63, 109, 255, 0.10),
+      shadow: const Color.fromRGBO(43, 67, 104, 0.12),
+      overlay: const Color.fromRGBO(255, 255, 255, 0.72),
     );
   }
 }

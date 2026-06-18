@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/app_controls.dart';
 import '../../core/widgets/media_artwork.dart';
 import '../../data/models/media_item.dart';
 import '../../providers.dart';
@@ -38,7 +41,7 @@ class NowPlayingView extends ConsumerWidget {
         : (playback.position.inMilliseconds / 1000).clamp(0.0, sliderMax);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
       child: Column(
         children: [
           _HeaderBar(
@@ -46,7 +49,7 @@ class NowPlayingView extends ConsumerWidget {
             subtitle: media.subtitle,
             onOpenFile: () => pickAndOpenVideo(ref, GoRouter.of(context)),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Expanded(
             child: _VideoStage(
               media: media,
@@ -63,7 +66,7 @@ class NowPlayingView extends ConsumerWidget {
   }
 }
 
-class _VideoStage extends ConsumerWidget {
+class _VideoStage extends ConsumerStatefulWidget {
   const _VideoStage({
     required this.media,
     required this.playback,
@@ -81,62 +84,167 @@ class _VideoStage extends ConsumerWidget {
   final PlayerController playerController;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_VideoStage> createState() => _VideoStageState();
+}
+
+class _VideoStageState extends ConsumerState<_VideoStage> {
+  Timer? _hideTimer;
+  bool _controlsVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleAutoHide();
+  }
+
+  @override
+  void didUpdateWidget(covariant _VideoStage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playback.isPlaying != widget.playback.isPlaying ||
+        oldWidget.playback.isBuffering != widget.playback.isBuffering ||
+        oldWidget.playback.isOpening != widget.playback.isOpening ||
+        oldWidget.playback.errorText != widget.playback.errorText ||
+        oldWidget.media.mediaId != widget.media.mediaId) {
+      _showControls();
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  bool get _canAutoHide =>
+      widget.playback.isPlaying &&
+      !widget.playback.isBuffering &&
+      !widget.playback.isOpening &&
+      widget.playback.errorText == null;
+
+  void _showControls() {
+    if (!_controlsVisible && mounted) {
+      setState(() {
+        _controlsVisible = true;
+      });
+    }
+    _scheduleAutoHide();
+  }
+
+  void _scheduleAutoHide() {
+    _hideTimer?.cancel();
+    if (!_canAutoHide) {
+      if (!_controlsVisible && mounted) {
+        setState(() {
+          _controlsVisible = true;
+        });
+      }
+      return;
+    }
+
+    _hideTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted || !_canAutoHide) {
+        return;
+      }
+      setState(() {
+        _controlsVisible = false;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (media.backdropUrl != null || media.artworkUrl != null)
-              Positioned.fill(
-                child: MediaArtwork(
-                  source: media.backdropUrl ?? media.artworkUrl,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            Positioned.fill(
-              child: Video(
-                controller: playerController.videoController,
-                controls: NoVideoControls,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const Positioned.fill(child: _VideoChromeGradient()),
-            if (playback.isBuffering || playback.isOpening)
-              const Center(child: CircularProgressIndicator()),
-            if (playback.errorText != null)
-              Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: palette.overlay,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(playback.errorText!, textAlign: TextAlign.center),
-                ),
-              ),
-            Positioned(
-              left: 30,
-              right: 30,
-              bottom: 24,
-              child: _PlayerControls(
-                media: media,
-                playback: playback,
-                duration: duration,
-                sliderValue: sliderValue,
-                sliderMax: sliderMax,
-                playerController: playerController,
-              ),
+    return MouseRegion(
+      onEnter: (_) => _showControls(),
+      onHover: (_) => _showControls(),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: palette.shadow,
+              blurRadius: 28,
+              offset: const Offset(0, 16),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (widget.media.backdropUrl != null ||
+                  widget.media.artworkUrl != null)
+                Positioned.fill(
+                  child: MediaArtwork(
+                    source: widget.media.backdropUrl ?? widget.media.artworkUrl,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              Positioned.fill(
+                child: Video(
+                  controller: widget.playerController.videoController,
+                  controls: NoVideoControls,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  opacity: _controlsVisible ? 1 : 0,
+                  child: const _VideoChromeGradient(),
+                ),
+              ),
+              if (widget.playback.isBuffering || widget.playback.isOpening)
+                const Center(child: CircularProgressIndicator()),
+              if (widget.playback.errorText != null)
+                Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: palette.overlay,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      widget.playback.errorText!,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 26,
+                right: 26,
+                bottom: 18,
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    offset: _controlsVisible
+                        ? Offset.zero
+                        : const Offset(0, 0.1),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOut,
+                      opacity: _controlsVisible ? 1 : 0,
+                      child: _PlayerControls(
+                        media: widget.media,
+                        playback: widget.playback,
+                        duration: widget.duration,
+                        sliderValue: widget.sliderValue,
+                        sliderMax: widget.sliderMax,
+                        playerController: widget.playerController,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -153,11 +261,11 @@ class _VideoChromeGradient extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: const [0.45, 0.78, 1],
+          stops: const [0.48, 0.78, 1],
           colors: [
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.26),
-            Colors.black.withValues(alpha: 0.78),
+            Colors.black.withValues(alpha: 0.20),
+            Colors.black.withValues(alpha: 0.70),
           ],
         ),
       ),
@@ -197,6 +305,8 @@ class _PlayerControls extends StatelessWidget {
             inactiveTrackColor: const Color.fromRGBO(255, 255, 255, 0.20),
             activeTrackColor: palette.primary,
             thumbColor: palette.primary,
+            trackHeight: 2,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
           ),
           child: Slider(
             value: sliderValue,
@@ -228,9 +338,9 @@ class _PlayerControls extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         SizedBox(
-          height: 64,
+          height: 50,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -287,7 +397,7 @@ class _PlayerControls extends StatelessWidget {
                         size: 20,
                       ),
                       SizedBox(
-                        width: 132,
+                        width: 118,
                         child: Slider(
                           value: playback.volume.clamp(0, 100),
                           max: 100,
@@ -336,7 +446,8 @@ class _HeaderBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               if (subtitle != null)
@@ -345,6 +456,7 @@ class _HeaderBar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
                 ),
             ],
           ),
@@ -354,39 +466,22 @@ class _HeaderBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _HeaderIcon(icon: Icons.folder_open_rounded, onTap: onOpenFile),
+              AppToolButton(
+                icon: Icons.folder_open_rounded,
+                onPressed: onOpenFile,
+                filled: true,
+              ),
               const SizedBox(width: 8),
-              const _HeaderIcon(icon: Icons.fit_screen_outlined),
+              const AppToolButton(
+                icon: Icons.fit_screen_outlined,
+                filled: true,
+              ),
               const SizedBox(width: 8),
-              const _HeaderIcon(icon: Icons.more_horiz_rounded),
+              const AppToolButton(icon: Icons.more_horiz_rounded, filled: true),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: const Color.fromRGBO(255, 255, 255, 0.05),
-        ),
-        child: Icon(icon, size: 17),
-      ),
     );
   }
 }
@@ -399,10 +494,18 @@ class _ControlIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      color: Colors.white.withValues(alpha: 0.74),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Icon(
+          icon,
+          color: Colors.white.withValues(alpha: 0.74),
+          size: 22,
+        ),
+      ),
     );
   }
 }
@@ -420,23 +523,23 @@ class _PlayButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(32),
       onTap: onTap,
       child: Container(
-        width: 64,
-        height: 64,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: palette.primary,
           boxShadow: [
             BoxShadow(
               color: palette.primary.withValues(alpha: 0.32),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Icon(
           playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
           color: Colors.white,
-          size: 34,
+          size: 30,
         ),
       ),
     );
@@ -485,10 +588,10 @@ class _EmptyPlayerState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
+          AppPillButton(
             onPressed: onOpenFile,
-            icon: const Icon(Icons.folder_open_rounded),
-            label: const Text('选择视频文件'),
+            icon: Icons.folder_open_rounded,
+            label: '选择视频文件',
           ),
         ],
       ),

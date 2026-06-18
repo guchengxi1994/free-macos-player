@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'data/models/app_settings.dart';
 import 'data/models/favorite_folder.dart';
 import 'data/models/media_item.dart';
-import 'data/models/playlist_entry.dart';
 import 'data/repositories/library_repository.dart';
 import 'data/services/local_database.dart';
 import 'features/player/player_controller.dart';
@@ -29,12 +28,6 @@ final mediaLibraryProvider = StreamProvider<List<MediaItem>>((ref) async* {
   final database = await ref.watch(localDatabaseProvider.future);
   final repository = LibraryRepository(database.isar);
   yield* repository.watchAllMedia();
-});
-
-final playlistsProvider = StreamProvider<List<PlaylistEntry>>((ref) async* {
-  final database = await ref.watch(localDatabaseProvider.future);
-  final repository = LibraryRepository(database.isar);
-  yield* repository.watchPlaylists();
 });
 
 final favoriteFoldersProvider = StreamProvider<List<FavoriteFolder>>((
@@ -114,6 +107,14 @@ final filteredHistoryProvider = Provider<List<MediaItem>>((ref) {
     final haystacks = [item.title, item.subtitle ?? '', item.genreLine ?? ''];
     return haystacks.any((value) => value.toLowerCase().contains(query));
   }).toList();
+});
+
+final networkMediaProvider = Provider<List<MediaItem>>((ref) {
+  final mediaList = ref
+      .watch(mediaLibraryProvider)
+      .maybeWhen(data: (value) => value, orElse: () => const <MediaItem>[]);
+  return mediaList.where((item) => item.mediaId.startsWith('url:')).toList()
+    ..sort((a, b) => b.sortOrder.compareTo(a.sortOrder));
 });
 
 final favoriteItemsProvider = Provider<List<MediaItem>>((ref) {

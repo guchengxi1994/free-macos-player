@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/app_controls.dart';
 import '../../core/widgets/media_artwork.dart';
 import '../../data/models/media_item.dart';
 import '../../providers.dart';
@@ -20,76 +21,84 @@ class HistoryView extends ConsumerWidget {
     final theme = Theme.of(context);
     final items = ref.watch(filteredHistoryProvider);
 
-    return Padding(
-      padding: EdgeInsets.all(compact ? 16 : 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '历史记录',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              const _ActionIcon(icon: Icons.fit_screen_outlined),
-              const SizedBox(width: 8),
-              const _ActionIcon(icon: Icons.fullscreen_outlined),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (value) {
-                    ref.read(historyQueryProvider.notifier).state = value;
-                  },
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search_rounded),
-                    hintText: '搜索历史记录',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const _ActionIcon(icon: Icons.filter_alt_outlined),
-              const SizedBox(width: 16),
-              InkWell(
-                onTap: () {
-                  ref
-                      .read(libraryRepositoryProvider.future)
-                      .then((repo) => repo.clearHistory());
-                },
-                child: Text(
-                  '清空',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.softText,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Expanded(
-            child: ListView(
+    return ColoredBox(
+      color: palette.panelBackground,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          compact ? 16 : 22,
+          compact ? 16 : 22,
+          compact ? 16 : 18,
+          compact ? 16 : 18,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                _HistoryGroup(
-                  title: '今天',
-                  items: items.where(_isToday).toList(),
-                  compact: compact,
+                Text(
+                  '历史记录',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                const SizedBox(height: 14),
-                _HistoryGroup(
-                  title: '昨天',
-                  items: items.where(_isYesterday).toList(),
-                  compact: compact,
+                const Spacer(),
+                const AppToolButton(icon: Icons.fit_screen_outlined),
+                const SizedBox(width: 8),
+                const AppToolButton(icon: Icons.fullscreen_outlined),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) {
+                      ref.read(historyQueryProvider.notifier).state = value;
+                    },
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search_rounded),
+                      hintText: '搜索历史记录',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const AppToolButton(icon: Icons.filter_alt_outlined),
+                const SizedBox(width: 14),
+                InkWell(
+                  onTap: () {
+                    ref
+                        .read(libraryRepositoryProvider.future)
+                        .then((repo) => repo.clearHistory());
+                  },
+                  child: Text(
+                    '清空',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.softText,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                children: [
+                  _HistoryGroup(
+                    title: '今天',
+                    items: items.where(_isToday).toList(),
+                    compact: compact,
+                  ),
+                  const SizedBox(height: 14),
+                  _HistoryGroup(
+                    title: '昨天',
+                    items: items.where(_isYesterday).toList(),
+                    compact: compact,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -140,10 +149,10 @@ class _HistoryGroup extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         for (final item in items) ...[
           _HistoryRow(item: item, compact: compact),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
         ],
       ],
     );
@@ -162,7 +171,7 @@ class _HistoryRow extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(10),
       onTap: () {
         ref.read(currentMediaIdProvider.notifier).state = item.mediaId;
         ref.read(playerControllerProvider.notifier).openMedia(item);
@@ -172,10 +181,10 @@ class _HistoryRow extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(6),
             child: SizedBox(
-              width: compact ? 96 : 112,
-              height: compact ? 62 : 74,
+              width: compact ? 92 : 102,
+              height: compact ? 58 : 64,
               child: MediaArtwork(source: item.artworkUrl),
             ),
           ),
@@ -195,18 +204,23 @@ class _HistoryRow extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Icon(Icons.more_horiz_rounded, size: 18),
+                      Icon(
+                        Icons.more_horiz_rounded,
+                        size: 18,
+                        color: palette.softText,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(99),
                     child: LinearProgressIndicator(
-                      minHeight: 3,
+                      minHeight: 2,
                       value: item.watchedRatio,
                       backgroundColor: palette.stroke,
                       valueColor: AlwaysStoppedAnimation(palette.primary),
@@ -238,26 +252,6 @@ class _HistoryRow extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ActionIcon extends StatelessWidget {
-  const _ActionIcon({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: palette.panelSecondaryBackground,
-      ),
-      child: Icon(icon, size: 18),
     );
   }
 }
