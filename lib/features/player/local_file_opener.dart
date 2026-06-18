@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/services/file_access_service.dart';
+import '../../data/services/video_thumbnail_service.dart';
 import '../../providers.dart';
 import '../app/app_nav.dart';
 
@@ -30,10 +32,29 @@ Future<void> pickAndOpenVideo(WidgetRef ref, GoRouter router) async {
 
 Future<void> openVideoPath(WidgetRef ref, GoRouter router, String path) async {
   final repository = await ref.read(libraryRepositoryProvider.future);
-  final media = await repository.upsertLocalFile(path);
+  final bookmark = await const FileAccessService().createBookmark(path);
+  final media = await repository.upsertLocalFile(path, bookmark: bookmark);
   ref.read(currentMediaIdProvider.notifier).state = media.mediaId;
   await ref.read(playerControllerProvider.notifier).openMedia(media);
   router.go(AppSection.nowPlaying.path);
+  unawaited(_generateThumbnail(ref, media.mediaId, media.source));
+}
+
+Future<void> _generateThumbnail(
+  WidgetRef ref,
+  String mediaId,
+  String sourcePath,
+) async {
+  final thumbnailPath = await const VideoThumbnailService().generateForFile(
+    sourcePath: sourcePath,
+    mediaId: mediaId,
+  );
+  if (thumbnailPath == null) {
+    return;
+  }
+
+  final repository = await ref.read(libraryRepositoryProvider.future);
+  await repository.updateArtwork(mediaId, thumbnailPath);
 }
 
 class MacosOpenFileListener {

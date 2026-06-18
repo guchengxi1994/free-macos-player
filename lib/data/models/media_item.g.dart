@@ -32,82 +32,87 @@ const MediaItemSchema = CollectionSchema(
       name: r'backdropUrl',
       type: IsarType.string,
     ),
-    r'chapters': PropertySchema(
+    r'bookmark': PropertySchema(
       id: 3,
+      name: r'bookmark',
+      type: IsarType.string,
+    ),
+    r'chapters': PropertySchema(
+      id: 4,
       name: r'chapters',
       type: IsarType.objectList,
 
       target: r'ChapterCue',
     ),
     r'durationMillis': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'durationMillis',
       type: IsarType.long,
     ),
     r'genreLine': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'genreLine',
       type: IsarType.string,
     ),
     r'isCompleted': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
     r'isFavorite': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
     r'languageLabel': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'languageLabel',
       type: IsarType.string,
     ),
     r'lastPlayedAt': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'lastPlayedAt',
       type: IsarType.dateTime,
     ),
-    r'mediaId': PropertySchema(id: 10, name: r'mediaId', type: IsarType.string),
+    r'mediaId': PropertySchema(id: 11, name: r'mediaId', type: IsarType.string),
     r'metaLine': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'metaLine',
       type: IsarType.string,
     ),
     r'progressMillis': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'progressMillis',
       type: IsarType.long,
     ),
     r'qualityLabel': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'qualityLabel',
       type: IsarType.string,
     ),
     r'sortOrder': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'sortOrder',
       type: IsarType.long,
     ),
-    r'source': PropertySchema(id: 15, name: r'source', type: IsarType.string),
+    r'source': PropertySchema(id: 16, name: r'source', type: IsarType.string),
     r'spotlight': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'spotlight',
       type: IsarType.bool,
     ),
     r'subtitle': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'subtitle',
       type: IsarType.string,
     ),
     r'synopsis': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'synopsis',
       type: IsarType.string,
     ),
-    r'title': PropertySchema(id: 19, name: r'title', type: IsarType.string),
-    r'year': PropertySchema(id: 20, name: r'year', type: IsarType.long),
+    r'title': PropertySchema(id: 20, name: r'title', type: IsarType.string),
+    r'year': PropertySchema(id: 21, name: r'year', type: IsarType.long),
   },
 
   estimateSize: _mediaItemEstimateSize,
@@ -159,6 +164,12 @@ int _mediaItemEstimateSize(
   }
   {
     final value = object.backdropUrl;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.bookmark;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -222,29 +233,30 @@ void _mediaItemSerialize(
   writer.writeString(offsets[0], object.artworkUrl);
   writer.writeString(offsets[1], object.audioLabel);
   writer.writeString(offsets[2], object.backdropUrl);
+  writer.writeString(offsets[3], object.bookmark);
   writer.writeObjectList<ChapterCue>(
-    offsets[3],
+    offsets[4],
     allOffsets,
     ChapterCueSchema.serialize,
     object.chapters,
   );
-  writer.writeLong(offsets[4], object.durationMillis);
-  writer.writeString(offsets[5], object.genreLine);
-  writer.writeBool(offsets[6], object.isCompleted);
-  writer.writeBool(offsets[7], object.isFavorite);
-  writer.writeString(offsets[8], object.languageLabel);
-  writer.writeDateTime(offsets[9], object.lastPlayedAt);
-  writer.writeString(offsets[10], object.mediaId);
-  writer.writeString(offsets[11], object.metaLine);
-  writer.writeLong(offsets[12], object.progressMillis);
-  writer.writeString(offsets[13], object.qualityLabel);
-  writer.writeLong(offsets[14], object.sortOrder);
-  writer.writeString(offsets[15], object.source);
-  writer.writeBool(offsets[16], object.spotlight);
-  writer.writeString(offsets[17], object.subtitle);
-  writer.writeString(offsets[18], object.synopsis);
-  writer.writeString(offsets[19], object.title);
-  writer.writeLong(offsets[20], object.year);
+  writer.writeLong(offsets[5], object.durationMillis);
+  writer.writeString(offsets[6], object.genreLine);
+  writer.writeBool(offsets[7], object.isCompleted);
+  writer.writeBool(offsets[8], object.isFavorite);
+  writer.writeString(offsets[9], object.languageLabel);
+  writer.writeDateTime(offsets[10], object.lastPlayedAt);
+  writer.writeString(offsets[11], object.mediaId);
+  writer.writeString(offsets[12], object.metaLine);
+  writer.writeLong(offsets[13], object.progressMillis);
+  writer.writeString(offsets[14], object.qualityLabel);
+  writer.writeLong(offsets[15], object.sortOrder);
+  writer.writeString(offsets[16], object.source);
+  writer.writeBool(offsets[17], object.spotlight);
+  writer.writeString(offsets[18], object.subtitle);
+  writer.writeString(offsets[19], object.synopsis);
+  writer.writeString(offsets[20], object.title);
+  writer.writeLong(offsets[21], object.year);
 }
 
 MediaItem _mediaItemDeserialize(
@@ -257,31 +269,32 @@ MediaItem _mediaItemDeserialize(
   object.artworkUrl = reader.readStringOrNull(offsets[0]);
   object.audioLabel = reader.readStringOrNull(offsets[1]);
   object.backdropUrl = reader.readStringOrNull(offsets[2]);
+  object.bookmark = reader.readStringOrNull(offsets[3]);
   object.chapters =
       reader.readObjectList<ChapterCue>(
-        offsets[3],
+        offsets[4],
         ChapterCueSchema.deserialize,
         allOffsets,
         ChapterCue(),
       ) ??
       [];
-  object.durationMillis = reader.readLong(offsets[4]);
-  object.genreLine = reader.readStringOrNull(offsets[5]);
-  object.isCompleted = reader.readBool(offsets[6]);
-  object.isFavorite = reader.readBool(offsets[7]);
-  object.languageLabel = reader.readStringOrNull(offsets[8]);
-  object.lastPlayedAt = reader.readDateTimeOrNull(offsets[9]);
-  object.mediaId = reader.readString(offsets[10]);
-  object.metaLine = reader.readStringOrNull(offsets[11]);
-  object.progressMillis = reader.readLong(offsets[12]);
-  object.qualityLabel = reader.readStringOrNull(offsets[13]);
-  object.sortOrder = reader.readLong(offsets[14]);
-  object.source = reader.readString(offsets[15]);
-  object.spotlight = reader.readBool(offsets[16]);
-  object.subtitle = reader.readStringOrNull(offsets[17]);
-  object.synopsis = reader.readStringOrNull(offsets[18]);
-  object.title = reader.readString(offsets[19]);
-  object.year = reader.readLongOrNull(offsets[20]);
+  object.durationMillis = reader.readLong(offsets[5]);
+  object.genreLine = reader.readStringOrNull(offsets[6]);
+  object.isCompleted = reader.readBool(offsets[7]);
+  object.isFavorite = reader.readBool(offsets[8]);
+  object.languageLabel = reader.readStringOrNull(offsets[9]);
+  object.lastPlayedAt = reader.readDateTimeOrNull(offsets[10]);
+  object.mediaId = reader.readString(offsets[11]);
+  object.metaLine = reader.readStringOrNull(offsets[12]);
+  object.progressMillis = reader.readLong(offsets[13]);
+  object.qualityLabel = reader.readStringOrNull(offsets[14]);
+  object.sortOrder = reader.readLong(offsets[15]);
+  object.source = reader.readString(offsets[16]);
+  object.spotlight = reader.readBool(offsets[17]);
+  object.subtitle = reader.readStringOrNull(offsets[18]);
+  object.synopsis = reader.readStringOrNull(offsets[19]);
+  object.title = reader.readString(offsets[20]);
+  object.year = reader.readLongOrNull(offsets[21]);
   return object;
 }
 
@@ -299,6 +312,8 @@ P _mediaItemDeserializeProp<P>(
     case 2:
       return (reader.readStringOrNull(offset)) as P;
     case 3:
+      return (reader.readStringOrNull(offset)) as P;
+    case 4:
       return (reader.readObjectList<ChapterCue>(
                 offset,
                 ChapterCueSchema.deserialize,
@@ -307,39 +322,39 @@ P _mediaItemDeserializeProp<P>(
               ) ??
               [])
           as P;
-    case 4:
-      return (reader.readLong(offset)) as P;
     case 5:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 6:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
-    case 9:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 10:
-      return (reader.readString(offset)) as P;
-    case 11:
-      return (reader.readStringOrNull(offset)) as P;
-    case 12:
-      return (reader.readLong(offset)) as P;
-    case 13:
-      return (reader.readStringOrNull(offset)) as P;
-    case 14:
-      return (reader.readLong(offset)) as P;
-    case 15:
-      return (reader.readString(offset)) as P;
-    case 16:
       return (reader.readBool(offset)) as P;
-    case 17:
+    case 9:
       return (reader.readStringOrNull(offset)) as P;
+    case 10:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readLong(offset)) as P;
+    case 14:
+      return (reader.readStringOrNull(offset)) as P;
+    case 15:
+      return (reader.readLong(offset)) as P;
+    case 16:
+      return (reader.readString(offset)) as P;
+    case 17:
+      return (reader.readBool(offset)) as P;
     case 18:
       return (reader.readStringOrNull(offset)) as P;
     case 19:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 20:
+      return (reader.readString(offset)) as P;
+    case 21:
       return (reader.readLongOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1040,6 +1055,170 @@ extension MediaItemQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'backdropUrl', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'bookmark'),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition>
+  bookmarkIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'bookmark'),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'bookmark',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'bookmark',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'bookmark',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition> bookmarkIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'bookmark', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterFilterCondition>
+  bookmarkIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'bookmark', value: ''),
       );
     });
   }
@@ -2969,6 +3148,18 @@ extension MediaItemQuerySortBy on QueryBuilder<MediaItem, MediaItem, QSortBy> {
     });
   }
 
+  QueryBuilder<MediaItem, MediaItem, QAfterSortBy> sortByBookmark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'bookmark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterSortBy> sortByBookmarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'bookmark', Sort.desc);
+    });
+  }
+
   QueryBuilder<MediaItem, MediaItem, QAfterSortBy> sortByDurationMillis() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'durationMillis', Sort.asc);
@@ -3209,6 +3400,18 @@ extension MediaItemQuerySortThenBy
   QueryBuilder<MediaItem, MediaItem, QAfterSortBy> thenByBackdropUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'backdropUrl', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterSortBy> thenByBookmark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'bookmark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MediaItem, MediaItem, QAfterSortBy> thenByBookmarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'bookmark', Sort.desc);
     });
   }
 
@@ -3455,6 +3658,14 @@ extension MediaItemQueryWhereDistinct
     });
   }
 
+  QueryBuilder<MediaItem, MediaItem, QDistinct> distinctByBookmark({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'bookmark', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<MediaItem, MediaItem, QDistinct> distinctByDurationMillis() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'durationMillis');
@@ -3602,6 +3813,12 @@ extension MediaItemQueryProperty
   QueryBuilder<MediaItem, String?, QQueryOperations> backdropUrlProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'backdropUrl');
+    });
+  }
+
+  QueryBuilder<MediaItem, String?, QQueryOperations> bookmarkProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'bookmark');
     });
   }
 

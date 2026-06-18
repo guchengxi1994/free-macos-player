@@ -2,6 +2,7 @@ import 'package:isar_community/isar.dart';
 import 'package:path/path.dart' as p;
 
 import '../models/app_settings.dart';
+import '../models/favorite_folder.dart';
 import '../models/media_item.dart';
 import '../models/playlist_entry.dart';
 
@@ -11,6 +12,8 @@ class LibraryRepository {
   final Isar isar;
 
   IsarCollection<AppSettings> get _settings => isar.collection<AppSettings>();
+  IsarCollection<FavoriteFolder> get _favoriteFolders =>
+      isar.collection<FavoriteFolder>();
   IsarCollection<MediaItem> get _items => isar.collection<MediaItem>();
   IsarCollection<PlaylistEntry> get _playlists =>
       isar.collection<PlaylistEntry>();
@@ -58,6 +61,12 @@ class LibraryRepository {
     return _playlists.where().sortBySortOrder().watch(fireImmediately: true);
   }
 
+  Stream<List<FavoriteFolder>> watchFavoriteFolders() {
+    return _favoriteFolders.where().sortBySortOrder().watch(
+      fireImmediately: true,
+    );
+  }
+
   Future<List<MediaItem>> searchHistory(String query) {
     final normalized = query.trim().toLowerCase();
     return _items
@@ -82,7 +91,7 @@ class LibraryRepository {
     return _items.filter().mediaIdEqualTo(mediaId).findFirst();
   }
 
-  Future<MediaItem> upsertLocalFile(String path) async {
+  Future<MediaItem> upsertLocalFile(String path, {String? bookmark}) async {
     final normalizedPath = p.normalize(path);
     final mediaId = 'file:$normalizedPath';
     final existing = await getByMediaId(mediaId);
@@ -95,6 +104,7 @@ class LibraryRepository {
       ..title = fileName.isEmpty ? p.basename(normalizedPath) : fileName
       ..subtitle = p.dirname(normalizedPath)
       ..source = normalizedPath
+      ..bookmark = bookmark ?? existing?.bookmark
       ..metaLine = p
           .extension(normalizedPath)
           .replaceFirst('.', '')
@@ -107,6 +117,30 @@ class LibraryRepository {
     });
 
     return item;
+  }
+
+  Future<void> updateBookmark(String mediaId, String bookmark) async {
+    final item = await getByMediaId(mediaId);
+    if (item == null) {
+      return;
+    }
+
+    item.bookmark = bookmark;
+    await isar.writeTxn(() async {
+      await _items.put(item);
+    });
+  }
+
+  Future<void> updateArtwork(String mediaId, String artworkPath) async {
+    final item = await getByMediaId(mediaId);
+    if (item == null) {
+      return;
+    }
+
+    item.artworkUrl = artworkPath;
+    await isar.writeTxn(() async {
+      await _items.put(item);
+    });
   }
 
   Future<void> updateProgress({
@@ -142,6 +176,62 @@ class LibraryRepository {
     item.isFavorite = !item.isFavorite;
     await isar.writeTxn(() async {
       await _items.put(item);
+    });
+  }
+
+  Future<void> createFavoriteFolder(String title) async {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      return;
+    }
+
+    final existingCount = await _favoriteFolders.count();
+    final folder = FavoriteFolder()
+      ..folderId = 'favorite-${DateTime.now().millisecondsSinceEpoch}'
+      ..title = trimmedTitle
+      ..description = '用于整理你主动收藏的视频'
+      ..sortOrder = existingCount + 1;
+
+    await isar.writeTxn(() async {
+      await _favoriteFolders.put(folder);
+    });
+  }
+
+  Future<void> addMediaToFavoriteFolder({
+    required String folderId,
+    required String mediaId,
+  }) async {
+    final folder = await _favoriteFolders
+        .filter()
+        .folderIdEqualTo(folderId)
+        .findFirst();
+    if (folder == null || folder.mediaIds.contains(mediaId)) {
+      return;
+    }
+
+    folder.mediaIds = [...folder.mediaIds, mediaId];
+    await isar.writeTxn(() async {
+      await _favoriteFolders.put(folder);
+    });
+  }
+
+  Future<void> removeMediaFromFavoriteFolder({
+    required String folderId,
+    required String mediaId,
+  }) async {
+    final folder = await _favoriteFolders
+        .filter()
+        .folderIdEqualTo(folderId)
+        .findFirst();
+    if (folder == null || !folder.mediaIds.contains(mediaId)) {
+      return;
+    }
+
+    folder.mediaIds = folder.mediaIds
+        .where((existingMediaId) => existingMediaId != mediaId)
+        .toList();
+    await isar.writeTxn(() async {
+      await _favoriteFolders.put(folder);
     });
   }
 

@@ -4,11 +4,7 @@ part 'media_item.g.dart';
 
 @embedded
 class ChapterCue {
-  ChapterCue({
-    this.title = '',
-    this.startMillis = 0,
-    this.thumbnailUrl,
-  });
+  ChapterCue({this.title = '', this.startMillis = 0, this.thumbnailUrl});
 
   String title;
   int startMillis;
@@ -17,9 +13,7 @@ class ChapterCue {
 
 @collection
 class MediaItem {
-  MediaItem({
-    this.id = Isar.autoIncrement,
-  });
+  MediaItem({this.id = Isar.autoIncrement});
 
   Id id;
 
@@ -29,6 +23,7 @@ class MediaItem {
   late String title;
   String? subtitle;
   late String source;
+  String? bookmark;
   String? artworkUrl;
   String? backdropUrl;
   String? metaLine;

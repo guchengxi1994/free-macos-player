@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/app_settings.dart';
+import '../../data/models/favorite_folder.dart';
 import '../../data/models/media_item.dart';
 import '../../data/models/playlist_entry.dart';
 import '../../providers.dart';
@@ -29,8 +30,13 @@ class SettingsView extends ConsumerWidget {
           data: (value) => value,
           orElse: () => const <PlaylistEntry>[],
         );
+    final favoriteFolders = ref
+        .watch(favoriteFoldersProvider)
+        .maybeWhen(
+          data: (value) => value,
+          orElse: () => const <FavoriteFolder>[],
+        );
     final historyCount = mediaItems.where((item) => item.hasHistory).length;
-    final favoriteCount = mediaItems.where((item) => item.isFavorite).length;
 
     return ColoredBox(
       color: palette.panelBackground,
@@ -72,8 +78,8 @@ class SettingsView extends ConsumerWidget {
                 _StatCard(
                   icon: Icons.favorite_border_rounded,
                   label: '收藏夹',
-                  value: '$favoriteCount',
-                  helper: '个收藏',
+                  value: '${favoriteFolders.length}',
+                  helper: '个文件夹',
                 ),
                 _StatCard(
                   icon: Icons.queue_music_rounded,
@@ -171,7 +177,7 @@ class SettingsView extends ConsumerWidget {
             const SizedBox(height: 16),
             _SectionCard(
               title: '本地数据',
-              subtitle: '媒体信息、播放进度、收藏和播放列表都保存在本机 Isar 数据库。',
+              subtitle: '媒体信息、播放进度、收藏夹和播放列表都保存在本机 Isar 数据库。',
               child: Column(
                 children: [
                   _InfoTile(

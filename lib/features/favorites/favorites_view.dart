@@ -2,419 +2,389 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_palette.dart';
-import '../../core/utils/formatters.dart';
+import '../../core/widgets/media_artwork.dart';
+import '../../data/models/favorite_folder.dart';
 import '../../data/models/media_item.dart';
 import '../../providers.dart';
 
 class FavoritesView extends ConsumerWidget {
-  const FavoritesView({super.key, required this.media});
-
-  final MediaItem media;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: media.backdropUrl == null
-              ? DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        palette.panelBackground,
-                        palette.panelSecondaryBackground,
-                      ],
-                    ),
-                  ),
-                )
-              : Image.network(media.backdropUrl!, fit: BoxFit.cover),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  palette.panelBackground.withValues(alpha: 0.96),
-                  palette.panelBackground.withValues(alpha: 0.82),
-                  palette.overlay.withValues(alpha: 0.54),
-                ],
-              ),
-            ),
-          ),
-        ),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 52,
-                ),
-                child: _DetailContent(media: media),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _DetailContent extends ConsumerWidget {
-  const _DetailContent({required this.media});
-
-  final MediaItem media;
+  const FavoritesView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final theme = Theme.of(context);
+    final folders = ref
+        .watch(favoriteFoldersProvider)
+        .maybeWhen(
+          data: (value) => value,
+          orElse: () => const <FavoriteFolder>[],
+        );
+    final mediaItems = ref
+        .watch(mediaLibraryProvider)
+        .maybeWhen(data: (value) => value, orElse: () => const <MediaItem>[]);
+    final currentMedia = ref.watch(currentMediaProvider);
+    final mediaById = {for (final item in mediaItems) item.mediaId: item};
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return ColoredBox(
+      color: palette.panelBackground,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Poster(media: media),
-            const SizedBox(width: 28),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      media.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '收藏夹',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      media.metaLine ??
-                          '${media.year ?? ''} · ${formatDuration(media.duration)}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.softText,
+                      const SizedBox(height: 8),
+                      Text(
+                        '收藏夹是你主动创建的文件夹，播放视频不会自动加入这里。',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: palette.softText,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _Tag(text: media.qualityLabel ?? '1080p'),
-                        _Tag(text: media.audioLabel ?? 'DDP 5.1'),
-                        _Tag(text: media.languageLabel ?? 'ENG'),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _PrimaryActionButton(
-                          icon: Icons.play_arrow_rounded,
-                          label: '继续播放',
-                          onTap: () {
-                            ref.read(currentMediaIdProvider.notifier).state =
-                                media.mediaId;
-                            ref
-                                .read(playerControllerProvider.notifier)
-                                .openMedia(media);
-                          },
-                        ),
-                        _GhostActionButton(
-                          icon: Icons.schedule_rounded,
-                          label: '从头播放',
-                          onTap: () async {
-                            ref.read(currentMediaIdProvider.notifier).state =
-                                media.mediaId;
-                            await ref
-                                .read(playerControllerProvider.notifier)
-                                .openMedia(media);
-                            await ref
-                                .read(playerControllerProvider.notifier)
-                                .resetAndPlayCurrent();
-                          },
-                        ),
-                        _GhostActionButton(
-                          icon: media.isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          label: media.isFavorite ? '已收藏' : '收藏',
-                          onTap: () {
-                            ref
-                                .read(libraryRepositoryProvider.future)
-                                .then(
-                                  (repo) => repo.toggleFavorite(media.mediaId),
-                                );
-                          },
-                        ),
-                        _GhostActionButton(
-                          icon: Icons.more_horiz_rounded,
-                          label: '更多',
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                FilledButton.icon(
+                  onPressed: () => _showCreateFolderDialog(context, ref),
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  label: const Text('新建收藏夹'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 30),
-        Row(
-          children: [
-            Text(
-              '章节',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              '查看全部',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.softText,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 132,
-          child: media.chapters.isEmpty
-              ? _EmptyChapters(message: media.synopsis ?? '暂无章节信息')
-              : ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: media.chapters.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 14),
+            const SizedBox(height: 22),
+            if (folders.isEmpty)
+              Expanded(
+                child: _EmptyFavoritesState(
+                  onCreate: () => _showCreateFolderDialog(context, ref),
+                ),
+              )
+            else
+              Expanded(
+                child: GridView.builder(
+                  itemCount: folders.length,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 360,
+                    mainAxisExtent: 236,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                  ),
                   itemBuilder: (context, index) {
-                    return _ChapterCard(
-                      chapter: media.chapters[index],
-                      index: index,
+                    final folder = folders[index];
+                    final folderMedia = folder.mediaIds
+                        .map((mediaId) => mediaById[mediaId])
+                        .whereType<MediaItem>()
+                        .toList();
+                    return _FavoriteFolderCard(
+                      folder: folder,
+                      mediaItems: folderMedia,
+                      currentMedia: currentMedia,
                     );
                   },
                 ),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-class _Poster extends StatelessWidget {
-  const _Poster({required this.media});
-
-  final MediaItem media;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: SizedBox(
-            width: 178,
-            height: 234,
-            child: media.artworkUrl != null
-                ? Image.network(media.artworkUrl!, fit: BoxFit.cover)
-                : Container(color: palette.panelSecondaryBackground),
-          ),
+Future<void> _showCreateFolderDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final controller = TextEditingController();
+  final title = await showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('新建收藏夹'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '例如：周末电影、学习资料、待重看'),
+          onSubmitted: (value) {
+            Navigator.of(context).pop(value);
+          },
         ),
-        Positioned(
-          right: 12,
-          bottom: 12,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: palette.overlay.withValues(alpha: 0.82),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.play_arrow_rounded, color: palette.primary),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
           ),
-        ),
-      ],
-    );
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('创建'),
+          ),
+        ],
+      );
+    },
+  );
+  controller.dispose();
+
+  final trimmedTitle = title?.trim();
+  if (trimmedTitle == null || trimmedTitle.isEmpty) {
+    return;
   }
+
+  final repository = await ref.read(libraryRepositoryProvider.future);
+  await repository.createFavoriteFolder(trimmedTitle);
 }
 
-class _ChapterCard extends StatelessWidget {
-  const _ChapterCard({required this.chapter, required this.index});
+class _FavoriteFolderCard extends ConsumerWidget {
+  const _FavoriteFolderCard({
+    required this.folder,
+    required this.mediaItems,
+    required this.currentMedia,
+  });
 
-  final ChapterCue chapter;
-  final int index;
+  final FavoriteFolder folder;
+  final List<MediaItem> mediaItems;
+  final MediaItem? currentMedia;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final theme = Theme.of(context);
+    final current = currentMedia;
+    final currentInFolder =
+        current != null && folder.mediaIds.contains(current.mediaId);
 
-    return SizedBox(
-      width: 148,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.panelSecondaryBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.stroke),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow,
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              height: 82,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  chapter.thumbnailUrl != null
-                      ? Image.network(chapter.thumbnailUrl!, fit: BoxFit.cover)
-                      : Container(color: palette.panelSecondaryBackground),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.keyboard_double_arrow_right_rounded,
-                        size: 16,
-                        color: Colors.white.withValues(alpha: 0.92),
-                      ),
-                    ),
+          _FolderPreview(mediaItems: mediaItems),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  folder.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-                ],
+                ),
               ),
-            ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: palette.primarySoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${mediaItems.length} 个视频',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: palette.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           Text(
-            '${index + 1}. ${chapter.title}',
+            folder.description ?? '主动加入的视频会出现在这里',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formatDuration(Duration(milliseconds: chapter.startMillis)),
             style: theme.textTheme.bodySmall?.copyWith(color: palette.softText),
           ),
+          const Spacer(),
+          if (current == null)
+            Text(
+              '先打开一个视频，再添加到收藏夹',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.softText,
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final repository = await ref.read(
+                    libraryRepositoryProvider.future,
+                  );
+                  if (currentInFolder) {
+                    await repository.removeMediaFromFavoriteFolder(
+                      folderId: folder.folderId,
+                      mediaId: current.mediaId,
+                    );
+                  } else {
+                    await repository.addMediaToFavoriteFolder(
+                      folderId: folder.folderId,
+                      mediaId: current.mediaId,
+                    );
+                  }
+                },
+                icon: Icon(
+                  currentInFolder
+                      ? Icons.check_circle_rounded
+                      : Icons.add_rounded,
+                ),
+                label: Text(currentInFolder ? '已加入当前视频' : '加入当前视频'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-class _EmptyChapters extends StatelessWidget {
-  const _EmptyChapters({required this.message});
+class _FolderPreview extends StatelessWidget {
+  const _FolderPreview({required this.mediaItems});
 
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: palette.panelSecondaryBackground.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.stroke),
-      ),
-      child: Text(
-        message,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: palette.softText),
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.text});
-
-  final String text;
+  final List<MediaItem> mediaItems;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(9),
-        color: palette.panelSecondaryBackground.withValues(alpha: 0.82),
-        border: Border.all(color: palette.stroke),
-      ),
-      child: Text(text, style: Theme.of(context).textTheme.labelSmall),
-    );
-  }
-}
+    final previewItems = mediaItems.take(3).toList();
 
-class _PrimaryActionButton extends StatelessWidget {
-  const _PrimaryActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return FilledButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
-      style: FilledButton.styleFrom(
-        backgroundColor: palette.primary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 86,
+        width: double.infinity,
+        child: previewItems.isEmpty
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [palette.primarySoft, palette.panelBackground],
+                  ),
+                ),
+                child: Icon(
+                  Icons.folder_special_outlined,
+                  color: palette.primary,
+                  size: 38,
+                ),
+              )
+            : Row(
+                children: [
+                  for (final item in previewItems)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 2),
+                        child: MediaArtwork(source: item.artworkUrl),
+                      ),
+                    ),
+                ],
+              ),
       ),
     );
   }
 }
 
-class _GhostActionButton extends StatelessWidget {
-  const _GhostActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _EmptyFavoritesState extends StatelessWidget {
+  const _EmptyFavoritesState({required this.onCreate});
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: palette.panelSecondaryBackground.withValues(
-          alpha: 0.86,
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: palette.panelSecondaryBackground,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: palette.stroke),
         ),
-        side: BorderSide(color: palette.stroke),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 78,
+              height: 78,
+              decoration: BoxDecoration(
+                color: palette.primarySoft,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.create_new_folder_outlined,
+                size: 38,
+                color: palette.primary,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              '还没有收藏夹',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '先创建一个收藏夹，再把当前视频主动加入进去。这里不会自动展示播放过的视频。',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.softText,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onCreate,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('新建收藏夹'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

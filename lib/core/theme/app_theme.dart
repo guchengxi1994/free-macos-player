@@ -17,8 +17,9 @@ ThemeData buildAppTheme(bool dark) {
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: scheme,
     textTheme: textTheme,
-    scaffoldBackgroundColor:
-        dark ? const Color(0xFF596273) : const Color(0xFFE8EEF8),
+    scaffoldBackgroundColor: dark
+        ? const Color(0xFF596273)
+        : const Color(0xFFE8EEF8),
     cardColor: dark ? const Color(0xFF121821) : Colors.white,
     dividerColor: dark ? Colors.white10 : const Color(0xFFE6EBF4),
     inputDecorationTheme: InputDecorationTheme(
@@ -39,9 +40,7 @@ ThemeData buildAppTheme(bool dark) {
       ),
       focusedBorder: OutlineInputBorder(
         borderSide: BorderSide(
-          color: dark
-              ? const Color(0xFF6F8BFF)
-              : const Color(0xFF4C74FF),
+          color: dark ? const Color(0xFF6F8BFF) : const Color(0xFF4C74FF),
         ),
         borderRadius: BorderRadius.circular(18),
       ),

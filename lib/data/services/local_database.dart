@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 import 'package:isar_community_flutter_libs/isar_flutter_libs.dart';
 
 import '../models/app_settings.dart';
+import '../models/favorite_folder.dart';
 import '../models/media_item.dart';
 import '../models/playlist_entry.dart';
 
@@ -22,6 +23,7 @@ class LocalDatabase {
     final directory = await _resolveDirectory();
     final isar = await Isar.open([
       AppSettingsSchema,
+      FavoriteFolderSchema,
       MediaItemSchema,
       PlaylistEntrySchema,
     ], directory: directory);

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'data/models/app_settings.dart';
+import 'data/models/favorite_folder.dart';
 import 'data/models/media_item.dart';
 import 'data/models/playlist_entry.dart';
 import 'data/repositories/library_repository.dart';
@@ -34,6 +35,14 @@ final playlistsProvider = StreamProvider<List<PlaylistEntry>>((ref) async* {
   final database = await ref.watch(localDatabaseProvider.future);
   final repository = LibraryRepository(database.isar);
   yield* repository.watchPlaylists();
+});
+
+final favoriteFoldersProvider = StreamProvider<List<FavoriteFolder>>((
+  ref,
+) async* {
+  final database = await ref.watch(localDatabaseProvider.future);
+  final repository = LibraryRepository(database.isar);
+  yield* repository.watchFavoriteFolders();
 });
 
 final libraryRepositoryProvider = FutureProvider<LibraryRepository>((

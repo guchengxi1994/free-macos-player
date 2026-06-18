@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/media_artwork.dart';
 import '../../data/models/media_item.dart';
 import '../../providers.dart';
 import '../app/app_nav.dart';
@@ -175,9 +176,7 @@ class _HistoryRow extends ConsumerWidget {
             child: SizedBox(
               width: compact ? 96 : 112,
               height: compact ? 62 : 74,
-              child: item.artworkUrl != null
-                  ? Image.network(item.artworkUrl!, fit: BoxFit.cover)
-                  : Container(color: palette.panelSecondaryBackground),
+              child: MediaArtwork(source: item.artworkUrl),
             ),
           ),
           const SizedBox(width: 14),

@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/theme/app_palette.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/media_artwork.dart';
 import '../../data/models/media_item.dart';
 import '../../providers.dart';
 import 'local_file_opener.dart';
@@ -93,9 +94,12 @@ class _VideoStage extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (media.backdropUrl != null)
+            if (media.backdropUrl != null || media.artworkUrl != null)
               Positioned.fill(
-                child: Image.network(media.backdropUrl!, fit: BoxFit.cover),
+                child: MediaArtwork(
+                  source: media.backdropUrl ?? media.artworkUrl,
+                  fit: BoxFit.cover,
+                ),
               ),
             Positioned.fill(
               child: Video(
@@ -124,6 +128,7 @@ class _VideoStage extends ConsumerWidget {
               right: 30,
               bottom: 24,
               child: _PlayerControls(
+                media: media,
                 playback: playback,
                 duration: duration,
                 sliderValue: sliderValue,
@@ -162,6 +167,7 @@ class _VideoChromeGradient extends StatelessWidget {
 
 class _PlayerControls extends StatelessWidget {
   const _PlayerControls({
+    required this.media,
     required this.playback,
     required this.duration,
     required this.sliderValue,
@@ -169,6 +175,7 @@ class _PlayerControls extends StatelessWidget {
     required this.playerController,
   });
 
+  final MediaItem media;
   final PlaybackSnapshot playback;
   final Duration duration;
   final double sliderValue;
@@ -179,6 +186,8 @@ class _PlayerControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final theme = Theme.of(context);
+    final currentMediaLoaded = playback.loadedMediaId == media.mediaId;
+    final playingCurrentMedia = currentMediaLoaded && playback.isPlaying;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -245,8 +254,8 @@ class _PlayerControls extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       _PlayButton(
-                        playing: playback.isPlaying,
-                        onTap: playerController.togglePlayback,
+                        playing: playingCurrentMedia,
+                        onTap: () => playerController.playOrOpen(media),
                       ),
                       const SizedBox(width: 12),
                       _ControlIconButton(

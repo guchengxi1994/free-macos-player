@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../data/models/media_item.dart';
+import '../../data/services/file_access_service.dart';
 import '../../providers.dart';
 import 'player_state.dart';
 
@@ -51,24 +52,41 @@ class PlayerController extends Notifier<PlaybackSnapshot> {
     return const PlaybackSnapshot();
   }
 
-  Future<void> openMedia(MediaItem item) async {
+  Future<void> openMedia(MediaItem item, {bool? play}) async {
     ref.read(currentMediaIdProvider.notifier).state = item.mediaId;
-    final autoPlay = ref.read(autoPlayOnOpenProvider);
+    final bool shouldPlay = play ?? ref.read(autoPlayOnOpenProvider);
     state = state.copyWith(
       isOpening: true,
       position: Duration(milliseconds: item.progressMillis),
       duration: Duration(milliseconds: item.durationMillis),
       clearError: true,
+      clearLoadedMedia: true,
     );
 
     try {
-      await player.open(
-        Media(_normalizeMediaSource(item.source)),
-        play: autoPlay,
-      );
+      final source = await _resolvePlayableSource(item);
+      if (source == null) {
+        state = state.copyWith(
+          errorText: '无法访问这个文件。请点击右上角文件夹按钮重新选择一次视频，授权后历史记录就可以继续打开。',
+        );
+        return;
+      }
+
+      if (kDebugMode) {
+        debugPrint('Opening media source: $source');
+      }
+
+      await player.stop();
+      await player.add(Media(source));
+      await player.jump(0);
+      state = state.copyWith(loadedMediaId: item.mediaId);
 
       if (item.progressMillis > 0) {
         await player.seek(Duration(milliseconds: item.progressMillis));
+      }
+
+      if (shouldPlay) {
+        await player.play();
       }
     } catch (error) {
       state = state.copyWith(errorText: '加载失败: $error');
@@ -83,6 +101,15 @@ class PlayerController extends Notifier<PlaybackSnapshot> {
     } else {
       await player.play();
     }
+  }
+
+  Future<void> playOrOpen(MediaItem item) async {
+    if (state.loadedMediaId != item.mediaId) {
+      await openMedia(item, play: true);
+      return;
+    }
+
+    await togglePlayback();
   }
 
   Future<void> seek(Duration target) async {
@@ -142,11 +169,30 @@ class PlayerController extends Notifier<PlaybackSnapshot> {
       return source;
     }
 
-    final file = File(source);
-    if (file.existsSync()) {
-      return file.uri.toString();
+    return source;
+  }
+
+  Future<String?> _resolvePlayableSource(MediaItem item) async {
+    final source = item.source;
+    final uri = Uri.tryParse(source);
+    if (uri != null && uri.hasScheme && uri.scheme != 'file') {
+      return source;
     }
 
-    return source;
+    final grant = await const FileAccessService().startAccessing(
+      path: source,
+      bookmark: item.bookmark,
+    );
+    if (grant == null) {
+      return null;
+    }
+
+    if (grant.renewedBookmark != null &&
+        grant.renewedBookmark != item.bookmark) {
+      final repository = await ref.read(libraryRepositoryProvider.future);
+      await repository.updateBookmark(item.mediaId, grant.renewedBookmark!);
+    }
+
+    return _normalizeMediaSource(grant.path);
   }
 }

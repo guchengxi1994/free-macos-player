@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers.dart';
 import '../favorites/favorites_view.dart';
 import '../history/history_view.dart';
 import '../player/now_playing_view.dart';
@@ -31,7 +30,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppSection.favorites.path,
-            pageBuilder: (_, _) => _fadePage(const _FavoritesRoutePage()),
+            pageBuilder: (_, _) => _fadePage(const FavoritesView()),
           ),
           GoRoute(
             path: AppSection.playlists.path,
@@ -58,27 +57,4 @@ CustomTransitionPage<void> _fadePage(Widget child) {
       );
     },
   );
-}
-
-class _FavoritesRoutePage extends ConsumerWidget {
-  const _FavoritesRoutePage();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final media = ref.watch(currentMediaProvider);
-    if (media == null) {
-      return const _EmptyFavoritesPage();
-    }
-
-    return FavoritesView(media: media);
-  }
-}
-
-class _EmptyFavoritesPage extends StatelessWidget {
-  const _EmptyFavoritesPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('先添加或播放一个视频，这里会展示影片详情与收藏操作。'));
-  }
 }

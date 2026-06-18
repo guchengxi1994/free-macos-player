@@ -6,6 +6,7 @@ class PlaybackSnapshot {
     this.position = Duration.zero,
     this.duration = Duration.zero,
     this.volume = 100,
+    this.loadedMediaId,
     this.errorText,
   });
 
@@ -15,6 +16,7 @@ class PlaybackSnapshot {
   final Duration position;
   final Duration duration;
   final double volume;
+  final String? loadedMediaId;
   final String? errorText;
 
   PlaybackSnapshot copyWith({
@@ -24,8 +26,10 @@ class PlaybackSnapshot {
     Duration? position,
     Duration? duration,
     double? volume,
+    String? loadedMediaId,
     String? errorText,
     bool clearError = false,
+    bool clearLoadedMedia = false,
   }) {
     return PlaybackSnapshot(
       isPlaying: isPlaying ?? this.isPlaying,
@@ -34,6 +38,9 @@ class PlaybackSnapshot {
       position: position ?? this.position,
       duration: duration ?? this.duration,
       volume: volume ?? this.volume,
+      loadedMediaId: clearLoadedMedia
+          ? null
+          : loadedMediaId ?? this.loadedMediaId,
       errorText: clearError ? null : errorText ?? this.errorText,
     );
   }
