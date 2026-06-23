@@ -232,7 +232,7 @@ class _WindowControls extends StatelessWidget {
         _WindowControlButton(
           color: const Color(0xFFFF5F57),
           onTap: () {
-            windowManager.close();
+            windowManager.destroy();
           },
         ),
         const SizedBox(width: 8),

@@ -64,6 +64,7 @@ class MacosOpenFileListener {
   final GoRouter router;
 
   bool _started = false;
+  final Set<String> _openedPaths = {};
 
   void start() {
     if (!Platform.isMacOS) {
@@ -85,9 +86,10 @@ class MacosOpenFileListener {
         return;
       }
 
-      await openVideoPath(ref, router, path);
+      await _openPathOnce(path);
     });
 
+    unawaited(_openFileChannel.invokeMethod<void>('openFileListenerReady'));
     unawaited(_drainPendingOpenFiles());
   }
 
@@ -101,8 +103,16 @@ class MacosOpenFileListener {
 
     for (final path in pendingPaths) {
       if (path.isNotEmpty) {
-        await openVideoPath(ref, router, path);
+        await _openPathOnce(path);
       }
     }
+  }
+
+  Future<void> _openPathOnce(String path) async {
+    if (!_openedPaths.add(path)) {
+      return;
+    }
+
+    await openVideoPath(ref, router, path);
   }
 }

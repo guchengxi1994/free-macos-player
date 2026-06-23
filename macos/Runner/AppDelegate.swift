@@ -8,6 +8,7 @@ class AppDelegate: FlutterAppDelegate {
   private let fileAccessChannelName = "free_macos_player/file_access"
   private let thumbnailChannelName = "free_macos_player/thumbnail"
   private var pendingOpenFiles: [String] = []
+  private var openFileListenerReady = false
   private var openFileChannel: FlutterMethodChannel?
   private var fileAccessChannel: FlutterMethodChannel?
   private var thumbnailChannel: FlutterMethodChannel?
@@ -28,21 +29,47 @@ class AppDelegate: FlutterAppDelegate {
       binaryMessenger: messenger
     )
     channel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "takePendingOpenFiles" else {
+      switch call.method {
+      case "openFileListenerReady":
+        self?.openFileListenerReady = true
+        self?.flushPendingOpenFiles()
+        result(nil)
+      case "takePendingOpenFiles":
+        let files = self?.pendingOpenFiles ?? []
+        self?.pendingOpenFiles.removeAll()
+        result(files)
+      default:
         result(FlutterMethodNotImplemented)
-        return
       }
-
-      let files = self?.pendingOpenFiles ?? []
-      self?.pendingOpenFiles.removeAll()
-      result(files)
     }
     openFileChannel = channel
+  }
 
-    for path in pendingOpenFiles {
-      channel.invokeMethod("openFile", arguments: path)
+  private func queueOpenFile(_ path: String) {
+    guard !path.isEmpty else {
+      return
     }
+
+    pendingOpenFiles.append(path)
+    flushPendingOpenFiles()
+  }
+
+  private func flushPendingOpenFiles() {
+    guard openFileListenerReady, let channel = openFileChannel else {
+      return
+    }
+
+    let files = pendingOpenFiles
     pendingOpenFiles.removeAll()
+
+    for path in files {
+      channel.invokeMethod("openFile", arguments: path) { [weak self] response in
+        if let error = response as? FlutterError {
+          NSLog("Failed to deliver openFile event: \(error.message ?? error.code)")
+          self?.pendingOpenFiles.append(path)
+        }
+      }
+    }
   }
 
   private func registerFileAccessChannel(_ messenger: FlutterBinaryMessenger) {
@@ -252,13 +279,15 @@ class AppDelegate: FlutterAppDelegate {
 
   override func application(_ sender: NSApplication, openFiles filenames: [String]) {
     for path in filenames {
-      if let channel = openFileChannel {
-        channel.invokeMethod("openFile", arguments: path)
-      } else {
-        pendingOpenFiles.append(path)
-      }
+      queueOpenFile(path)
     }
     sender.reply(toOpenOrPrint: .success)
+  }
+
+  override func application(_ application: NSApplication, open urls: [URL]) {
+    for url in urls where url.isFileURL {
+      queueOpenFile(url.path)
+    }
   }
 
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
